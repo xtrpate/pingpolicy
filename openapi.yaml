@@ -1,0 +1,86 @@
+openapi: 3.0.3
+info:
+  title: PingPolicy API
+  version: 0.1.0
+  description: Provider-independent notification preferences and policy checks.
+servers:
+  - url: http://localhost:3000
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      security: []
+      summary: Health check
+      responses:
+        "200":
+          description: API is running
+  /v1/users/{externalUserId}/preferences:
+    get:
+      summary: List a user's preferences in the authenticated project
+      parameters:
+        - in: path
+          name: externalUserId
+          required: true
+          schema: { type: string, maxLength: 191 }
+      responses:
+        "200": { description: Preference list }
+        "401": { description: Invalid or missing API key }
+  /v1/users/{externalUserId}/preferences/{category}:
+    put:
+      summary: Create or replace preferences for one category
+      parameters:
+        - in: path
+          name: externalUserId
+          required: true
+          schema: { type: string, maxLength: 191 }
+        - in: path
+          name: category
+          required: true
+          schema: { type: string, maxLength: 100 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channels]
+              properties:
+                channels:
+                  type: object
+                  required: [email, sms, push, in_app]
+                  properties:
+                    email: { type: boolean }
+                    sms: { type: boolean }
+                    push: { type: boolean }
+                    in_app: { type: boolean }
+      responses:
+        "200": { description: Saved preference }
+        "400": { description: Invalid input }
+        "401": { description: Invalid or missing API key }
+  /v1/policy/check:
+    post:
+      summary: Check if a notification is allowed by saved preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [externalUserId, category, channel]
+              properties:
+                externalUserId: { type: string }
+                category: { type: string }
+                channel:
+                  type: string
+                  enum: [email, sms, push, in_app]
+      responses:
+        "200": { description: Policy decision }
+        "400": { description: Invalid input }
+        "401": { description: Invalid or missing API key }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: PingPolicy project API key

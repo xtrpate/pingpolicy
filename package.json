@@ -1,0 +1,24 @@
+{
+  "name": "pingpolicy-api",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Provider-independent notification preference and policy API.",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "db:init": "node scripts/init-db.js",
+    "key:create": "node scripts/create-api-key.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.1.0",
+    "mysql2": "^3.14.0",
+    "zod": "^3.24.2"
+  }
+}
