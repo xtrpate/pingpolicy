@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PingPolicy - Live Playground & Dashboard</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #111827;
+      --card-border: #1f293d;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #10b981;
+      --success-bg: rgba(16, 185, 129, 0.12);
+      --danger: #ef4444;
+      --danger-bg: rgba(239, 68, 68, 0.12);
+      --warning: #f59e0b;
+      --warning-bg: rgba(245, 158, 11, 0.12);
+      --input-bg: #1f2937;
+      --border-color: #374151;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      line-height: 1.5;
+      padding-bottom: 60px;
+    }
+
+    header {
+      background-color: rgba(17, 24, 39, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--card-border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: var(--text-main);
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .brand span.shield { font-size: 1.5rem; }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.825rem;
+      padding: 0.3rem 0.75rem;
+      border-radius: 9999px;
+      font-weight: 600;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .status-badge.offline {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--danger);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: currentColor;
+    }
+
+    .btn-link {
+      color: var(--primary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 600;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      transition: all 0.2s;
+    }
+    .btn-link:hover {
+      background-color: rgba(59, 130, 246, 0.1);
+      border-color: var(--primary);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+    }
+
+    .hero-banner {
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+    .hero-banner h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #ffffff 0%, #9ca3af 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-banner p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .api-key-bar {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 2rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .api-key-bar label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .api-key-bar input {
+      flex: 1;
+      min-width: 280px;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      color: var(--text-main);
+      font-family: monospace;
+      font-size: 0.875rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+      gap: 1.75rem;
+    }
+
+    @media (max-width: 768px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.75rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card-subtitle {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+      color: var(--text-main);
+    }
+
+    .form-control {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.65rem 0.85rem;
+      color: var(--text-main);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-control:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+
+    .pill-group {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-color);
+      border-radius: 9999px;
+      padding: 0.25rem 0.65rem;
+      font-size: 0.775rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s;
+    }
+    .pill:hover {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: var(--primary);
+      color: #93c5fd;
+    }
+
+    .channel-toggles {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.85rem;
+      margin: 1.25rem 0;
+    }
+
+    .toggle-card {
+      background: rgba(31, 41, 55, 0.5);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s;
+    }
+
+    .toggle-card:hover {
+      border-color: #4b5563;
+    }
+
+    .toggle-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    /* Switch CSS */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #4b5563;
+      transition: .3s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: var(--primary);
+    }
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      border-radius: 8px;
+      padding: 0.7rem 1.25rem;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
+    }
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background-color: #374151;
+      color: var(--text-main);
+    }
+    .btn-secondary:hover {
+      background-color: #4b5563;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .result-box {
+      margin-top: 1.5rem;
+      padding: 1.25rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      display: none;
+      animation: fadeIn 0.25s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-box.allowed {
+      display: block;
+      background-color: var(--success-bg);
+      border-color: rgba(16, 185, 129, 0.35);
+    }
+
+    .result-box.denied {
+      display: block;
+      background-color: var(--danger-bg);
+      border-color: rgba(239, 68, 68, 0.35);
+    }
+
+    .result-box.denied-default {
+      display: block;
+      background-color: var(--warning-bg);
+      border-color: rgba(245, 158, 11, 0.35);
+    }
+
+    .result-box.info {
+      display: block;
+      background-color: rgba(59, 130, 246, 0.1);
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+
+    .result-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .result-desc {
+      font-size: 0.925rem;
+      color: var(--text-main);
+    }
+
+    .result-meta {
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      font-family: monospace;
+      color: var(--text-muted);
+    }
+
+    pre.json-view {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 0.75rem;
+      font-family: monospace;
+      font-size: 0.825rem;
+      overflow-x: auto;
+      margin-top: 0.75rem;
+      color: #7ee787;
+    }
+
+    .presets-container {
+      margin-top: 2rem;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .presets-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+
+    .preset-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .btn-preset {
+      background: #1f2937;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 0.5rem 0.85rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s;
+    }
+    .btn-preset:hover {
+      background: #374151;
+      border-color: var(--primary);
+    }
+
+    .pref-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      font-size: 0.875rem;
+    }
+
+    .pref-table th, .pref-table td {
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid var(--border-color);
+      text-align: left;
+    }
+
+    .pref-table th {
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .tag-on { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+    .tag-off { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="/" class="brand">
+      <span class="shield">🛡️</span>
+      <span>PingPolicy Playground</span>
+    </a>
+    <div class="nav-actions">
+      <div id="serverStatusBadge" class="status-badge">
+        <span class="status-dot"></span>
+        <span id="serverStatusText">Checking API...</span>
+      </div>
+      <a href="/docs" class="btn-link" target="_blank">📖 Interactive OpenAPI Docs ↗</a>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="hero-banner">
+      <h1>Notification Preference & Policy Engine</h1>
+      <p>Simulate policy evaluation decisions in real-time before spending credits on SMS, Email, or Push notifications.</p>
+    </div>
+
+    <!-- API Key Input Bar -->
+    <div class="api-key-bar">
+      <label for="apiKeyInput">Project API Key:</label>
+      <input type="text" id="apiKeyInput" value="pp_live_d4d113327a3d9fedf3d8d08c948497a28e830174a9dec362ef383ead7222127a" placeholder="Bearer pp_live_...">
+      <button class="btn btn-secondary" onclick="saveApiKey()">Save Key</button>
+    </div>
+
+    <!-- Interactive Grid -->
+    <div class="grid">
+      
+      <!-- Panel 1: Preference Manager -->
+      <div class="card">
+        <div class="card-title">
+          <span>⚙️</span>
+          <span>User Preferences</span>
+        </div>
+        <div class="card-subtitle">Upsert channel preferences for any external user ID.</div>
+
+        <div class="form-group">
+          <label>External User ID</label>
+          <input type="text" id="prefUserId" class="form-control" value="customer_1001">
+        </div>
+
+        <div class="form-group">
+          <label>Notification Category</label>
+          <input type="text" id="prefCategory" class="form-control" value="order_updates">
+          <div class="pill-group">
+            <span class="pill" onclick="setCategory('order_updates')">order_updates</span>
+            <span class="pill" onclick="setCategory('promotional_offers')">promotional_offers</span>
+            <span class="pill" onclick="setCategory('account_alerts')">account_alerts</span>
+            <span class="pill" onclick="setCategory('billing')">billing</span>
+          </div>
+        </div>
+
+        <label style="font-size: 0.875rem; font-weight: 600;">Channels</label>
+        <div class="channel-toggles">
+          <div class="toggle-card">
+            <div class="toggle-info">
+              <span>✉️</span>
+              <span>Email</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="chanEmail" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="toggle-card">
+            <div class="toggle-info">
+              <span>📱</span>
+              <span>SMS</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="chanSms">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="toggle-card">
+            <div class="toggle-info">
+              <span>🔔</span>
+              <span>Push</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="chanPush" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="toggle-card">
+            <div class="toggle-info">
+              <span>💬</span>
+              <span>In-App</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="chanInApp">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="savePreferences()">💾 Save Preferences</button>
+          <button class="btn btn-secondary" onclick="loadPreferences()">📋 Load All for User</button>
+        </div>
+
+        <div id="prefResultBox" class="result-box"></div>
+        <div id="userPreferencesTableContainer"></div>
+      </div>
+
+      <!-- Panel 2: Policy Check Simulator -->
+      <div class="card">
+        <div class="card-title">
+          <span>🎯</span>
+          <span>Live Policy Simulator</span>
+        </div>
+        <div class="card-subtitle">Verify if notification dispatch is permitted before sending.</div>
+
+        <div class="form-group">
+          <label>External User ID</label>
+          <input type="text" id="simUserId" class="form-control" value="customer_1001">
+        </div>
+
+        <div class="form-group">
+          <label>Category</label>
+          <input type="text" id="simCategory" class="form-control" value="order_updates">
+        </div>
+
+        <div class="form-group">
+          <label>Dispatch Channel</label>
+          <select id="simChannel" class="form-control">
+            <option value="email">✉️ Email</option>
+            <option value="sms">📱 SMS</option>
+            <option value="push">🔔 Push</option>
+            <option value="in_app">💬 In-App</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Message Content (Preview)</label>
+          <input type="text" id="simMessage" class="form-control" value="Your order #98234 has shipped!">
+        </div>
+
+        <button class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;" onclick="checkPolicy()">
+          ⚡ Run Policy Check & Simulate Dispatch
+        </button>
+
+        <div id="policyResultBox" class="result-box"></div>
+      </div>
+
+    </div>
+
+    <!-- Quick Scenario Presets -->
+    <div class="presets-container">
+      <div class="presets-title">⚡ Quick Integration Scenarios (Click to test):</div>
+      <div class="preset-buttons">
+        <button class="btn-preset" onclick="runPreset('customer_1001', 'order_updates', 'email', 'Your order #98234 has shipped!')">
+          🟢 Scenario 1: Order Updates via Email (Enabled &rarr; ALLOWED)
+        </button>
+        <button class="btn-preset" onclick="runPreset('customer_1001', 'order_updates', 'sms', 'Flash sale alert!')">
+          🔴 Scenario 2: Order Updates via SMS (Disabled &rarr; DENIED)
+        </button>
+        <button class="btn-preset" onclick="runPreset('customer_1001', 'promotional_offers', 'email', '20% off your next purchase!')">
+          🟠 Scenario 3: Promotional Offers via Email (Unset &rarr; DEFAULT-DENY)
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+
+    // Load persisted API key or default
+    document.addEventListener("DOMContentLoaded", () => {
+      const savedKey = localStorage.getItem("PINGPOLICY_API_KEY");
+      if (savedKey) document.getElementById("apiKeyInput").value = savedKey;
+      checkHealth();
+    });
+
+    function saveApiKey() {
+      const key = document.getElementById("apiKeyInput").value.trim();
+      localStorage.setItem("PINGPOLICY_API_KEY", key);
+      alert("API Key saved to localStorage!");
+    }
+
+    function getApiKey() {
+      return document.getElementById("apiKeyInput").value.trim();
+    }
+
+    async function checkHealth() {
+      const badge = document.getElementById("serverStatusBadge");
+      const text = document.getElementById("serverStatusText");
+      try {
+        const res = await fetch(`${API_BASE}/health`);
+        if (res.ok) {
+          const json = await res.json();
+          badge.className = "status-badge";
+          text.textContent = "API Online (Port 3000)";
+        } else {
+          throw new Error();
+        }
+      } catch (err) {
+        badge.className = "status-badge offline";
+        text.textContent = "API Offline";
+      }
+    }
+
+    function setCategory(cat) {
+      document.getElementById("prefCategory").value = cat;
+      document.getElementById("simCategory").value = cat;
+    }
+
+    async function savePreferences() {
+      const userId = document.getElementById("prefUserId").value.trim();
+      const category = document.getElementById("prefCategory").value.trim();
+      const email = document.getElementById("chanEmail").checked;
+      const sms = document.getElementById("chanSms").checked;
+      const push = document.getElementById("chanPush").checked;
+      const in_app = document.getElementById("chanInApp").checked;
+
+      const resultBox = document.getElementById("prefResultBox");
+      resultBox.className = "result-box info";
+      resultBox.innerHTML = "Saving preferences...";
+
+      try {
+        const res = await fetch(`${API_BASE}/v1/users/${encodeURIComponent(userId)}/preferences/${encodeURIComponent(category)}`, {
+          method: "PUT",
+          headers: {
+            "Authorization": `Bearer ${getApiKey()}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            channels: { email, sms, push, in_app }
+          })
+        });
+
+        const json = await res.json();
+        if (res.ok) {
+          resultBox.className = "result-box allowed";
+          resultBox.innerHTML = `
+            <div class="result-header">
+              <span class="result-title">✅ Preferences Saved</span>
+            </div>
+            <div class="result-desc">Updated channels for user <strong>${userId}</strong> under <code>${category}</code>.</div>
+            <pre class="json-view">${JSON.stringify(json.data, null, 2)}</pre>
+          `;
+          loadPreferences();
+        } else {
+          resultBox.className = "result-box denied";
+          resultBox.innerHTML = `
+            <div class="result-header">
+              <span class="result-title">❌ Failed (${res.status})</span>
+            </div>
+            <div class="result-desc">${json.error?.message || "Validation or auth error"}</div>
+            <pre class="json-view">${JSON.stringify(json, null, 2)}</pre>
+          `;
+        }
+      } catch (err) {
+        resultBox.className = "result-box denied";
+        resultBox.innerHTML = `<div class="result-desc">Network error: ${err.message}</div>`;
+      }
+    }
+
+    async function loadPreferences() {
+      const userId = document.getElementById("prefUserId").value.trim();
+      const tableContainer = document.getElementById("userPreferencesTableContainer");
+      tableContainer.innerHTML = "<div style='color: var(--text-muted); font-size: 0.85rem; margin-top: 1rem;'>Loading preferences...</div>";
+
+      try {
+        const res = await fetch(`${API_BASE}/v1/users/${encodeURIComponent(userId)}/preferences`, {
+          headers: { "Authorization": `Bearer ${getApiKey()}` }
+        });
+        const json = await res.json();
+
+        if (res.ok && json.data) {
+          if (json.data.length === 0) {
+            tableContainer.innerHTML = "<div style='color: var(--text-muted); font-size: 0.85rem; margin-top: 1rem;'>No preferences configured for this user yet.</div>";
+            return;
+          }
+
+          let rows = json.data.map(p => `
+            <tr>
+              <td><strong>${p.category}</strong></td>
+              <td><span class="tag ${p.email ? 'tag-on' : 'tag-off'}">${p.email ? 'ON' : 'OFF'}</span></td>
+              <td><span class="tag ${p.sms ? 'tag-on' : 'tag-off'}">${p.sms ? 'ON' : 'OFF'}</span></td>
+              <td><span class="tag ${p.push ? 'tag-on' : 'tag-off'}">${p.push ? 'ON' : 'OFF'}</span></td>
+              <td><span class="tag ${p.in_app ? 'tag-on' : 'tag-off'}">${p.in_app ? 'ON' : 'OFF'}</span></td>
+            </tr>
+          `).join("");
+
+          tableContainer.innerHTML = `
+            <table class="pref-table">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Email</th>
+                  <th>SMS</th>
+                  <th>Push</th>
+                  <th>In-App</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          `;
+        } else {
+          tableContainer.innerHTML = `<div style='color: var(--danger); font-size: 0.85rem; margin-top: 1rem;'>Error: ${json.error?.message || res.statusText}</div>`;
+        }
+      } catch (err) {
+        tableContainer.innerHTML = `<div style='color: var(--danger); font-size: 0.85rem; margin-top: 1rem;'>Network error: ${err.message}</div>`;
+      }
+    }
+
+    async function checkPolicy() {
+      const userId = document.getElementById("simUserId").value.trim();
+      const category = document.getElementById("simCategory").value.trim();
+      const channel = document.getElementById("simChannel").value;
+      const message = document.getElementById("simMessage").value.trim();
+
+      const resultBox = document.getElementById("policyResultBox");
+      resultBox.className = "result-box info";
+      resultBox.innerHTML = "Evaluating policy...";
+
+      try {
+        const res = await fetch(`${API_BASE}/v1/policy/check`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${getApiKey()}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            externalUserId: userId,
+            category,
+            channel
+          })
+        });
+
+        const json = await res.json();
+
+        if (res.ok && json.data) {
+          const d = json.data;
+          if (d.allowed) {
+            resultBox.className = "result-box allowed";
+            resultBox.innerHTML = `
+              <div class="result-header">
+                <span class="result-title">🟢 DISPATCH ALLOWED</span>
+                <span class="pill tag-on">${d.reason}</span>
+              </div>
+              <div class="result-desc">
+                ✅ <strong>Message permitted.</strong> Triggering dispatch to <code>${channel.toUpperCase()}</code> provider for "<em>${message}</em>".
+              </div>
+              <pre class="json-view">${JSON.stringify(json, null, 2)}</pre>
+            `;
+          } else if (d.reason === "preference_disabled") {
+            resultBox.className = "result-box denied";
+            resultBox.innerHTML = `
+              <div class="result-header">
+                <span class="result-title">🔴 DISPATCH DENIED</span>
+                <span class="pill tag-off">${d.reason}</span>
+              </div>
+              <div class="result-desc">
+                🚫 <strong>Suppressed notification.</strong> User explicitly disabled <code>${channel.toUpperCase()}</code> for "<em>${category}</em>". Saved dispatch credits!
+              </div>
+              <pre class="json-view">${JSON.stringify(json, null, 2)}</pre>
+            `;
+          } else {
+            resultBox.className = "result-box denied-default";
+            resultBox.innerHTML = `
+              <div class="result-header">
+                <span class="result-title">🟠 DEFAULT-DENIED</span>
+                <span class="pill" style="background: rgba(245,158,11,0.2); color: var(--warning);">${d.reason}</span>
+              </div>
+              <div class="result-desc">
+                🛡️ <strong>Suppressed notification.</strong> No preferences configured for "<em>${category}</em>". PingPolicy enforced fail-safe default-deny.
+              </div>
+              <pre class="json-view">${JSON.stringify(json, null, 2)}</pre>
+            `;
+          }
+        } else {
+          resultBox.className = "result-box denied";
+          resultBox.innerHTML = `
+            <div class="result-header">
+              <span class="result-title">❌ Request Failed (${res.status})</span>
+            </div>
+            <div class="result-desc">${json.error?.message || "Error processing request"}</div>
+            <pre class="json-view">${JSON.stringify(json, null, 2)}</pre>
+          `;
+        }
+      } catch (err) {
+        resultBox.className = "result-box denied";
+        resultBox.innerHTML = `<div class="result-desc">Network error: ${err.message}</div>`;
+      }
+    }
+
+    function runPreset(userId, category, channel, message) {
+      document.getElementById("simUserId").value = userId;
+      document.getElementById("simCategory").value = category;
+      document.getElementById("simChannel").value = channel;
+      document.getElementById("simMessage").value = message;
+      checkPolicy();
+    }
+  </script>
+</body>
+</html>

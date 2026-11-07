@@ -1,3 +1,5 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -6,10 +8,15 @@ import { config } from "./config.js";
 import { apiKeyAuth } from "./middleware/apiKeyAuth.js";
 import { preferencesRouter } from "./routes/preferences.js";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const rootDir = path.resolve(__dirname, "..");
+
 export const app = express();
 
 app.disable("x-powered-by");
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false
+}));
 app.use(express.json({ limit: "32kb" }));
 
 if (config.corsOrigins.length) {
@@ -33,6 +40,16 @@ app.use(rateLimit({
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", service: "pingpolicy-api" });
 });
+
+app.get("/openapi.yaml", (_req, res) => {
+  res.sendFile(path.join(rootDir, "openapi.yaml"));
+});
+
+app.get("/docs", (_req, res) => {
+  res.sendFile(path.join(rootDir, "public", "docs.html"));
+});
+
+app.use(express.static(path.join(rootDir, "public")));
 
 app.use("/v1", apiKeyAuth, preferencesRouter);
 
