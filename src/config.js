@@ -14,11 +14,11 @@ export const config = {
     port: Number(process.env.DB_PORT || 3306),
     database: required("DB_NAME"),
     user: required("DB_USER"),
-    password: required("DB_PASSWORD"),
-    connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10)
+    password: process.env.DB_PASSWORD ?? "",
+    connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10),
   },
   corsOrigins: (process.env.CORS_ORIGINS || "")
     .split(",")
     .map((origin) => origin.trim())
-    .filter(Boolean)
+    .filter(Boolean),
 };
