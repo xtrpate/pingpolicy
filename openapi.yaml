@@ -2,85 +2,397 @@ openapi: 3.0.3
 info:
   title: PingPolicy API
   version: 0.1.0
-  description: Provider-independent notification preferences and policy checks.
+  description: |
+    A provider-independent Notification Preferences and Policy Management REST API.
+    PingPolicy determines whether an external application is permitted to send a notification 
+    to a user across specific channels (email, sms, push, in_app) and categories before dispatch.
+  contact:
+    name: PingPolicy Team
+    url: https://github.com/xtrpate/pingpolicy
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
 servers:
   - url: http://localhost:3000
+    description: Local development server
 security:
   - bearerAuth: []
+
 paths:
   /health:
     get:
-      security: []
       summary: Health check
+      description: Returns the operational status of the PingPolicy API service. Does not require authentication.
+      security: []
+      tags:
+        - System
       responses:
         "200":
-          description: API is running
+          description: API is healthy and operational.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: "ok"
+                service: "pingpolicy-api"
+
   /v1/users/{externalUserId}/preferences:
     get:
-      summary: List a user's preferences in the authenticated project
+      summary: List user preferences
+      description: Returns all configured channel preferences for an external user within the authenticated project.
+      tags:
+        - Preferences
       parameters:
         - in: path
           name: externalUserId
           required: true
-          schema: { type: string, maxLength: 191 }
+          description: Opaque external identifier for the user.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 191
+          example: "customer_1001"
       responses:
-        "200": { description: Preference list }
-        "401": { description: Invalid or missing API key }
+        "200":
+          description: Successfully retrieved preference list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Preference"
+              example:
+                data:
+                  - externalUserId: "customer_1001"
+                    category: "order_updates"
+                    email: 1
+                    sms: 0
+                    push: 1
+                    in_app: 0
+                    createdAt: "2026-11-07T03:00:00.000Z"
+                    updatedAt: "2026-11-07T03:00:00.000Z"
+        "400":
+          description: Invalid path parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid API key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: "API_KEY_REQUIRED"
+                  message: "Provide a valid project API key using Authorization: Bearer <key>."
+
   /v1/users/{externalUserId}/preferences/{category}:
     put:
-      summary: Create or replace preferences for one category
+      summary: Upsert category preferences
+      description: Create or replace channel preferences for a user in a specific notification category.
+      tags:
+        - Preferences
       parameters:
         - in: path
           name: externalUserId
           required: true
-          schema: { type: string, maxLength: 191 }
+          description: Opaque external identifier for the user.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 191
+          example: "customer_1001"
         - in: path
           name: category
           required: true
-          schema: { type: string, maxLength: 100 }
+          description: Notification category identifier.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+          example: "order_updates"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [channels]
-              properties:
-                channels:
-                  type: object
-                  required: [email, sms, push, in_app]
-                  properties:
-                    email: { type: boolean }
-                    sms: { type: boolean }
-                    push: { type: boolean }
-                    in_app: { type: boolean }
+              $ref: "#/components/schemas/UpsertPreferenceRequest"
+            example:
+              channels:
+                email: true
+                sms: false
+                push: true
+                in_app: false
       responses:
-        "200": { description: Saved preference }
-        "400": { description: Invalid input }
-        "401": { description: Invalid or missing API key }
+        "200":
+          description: Preferences updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Preference"
+              example:
+                data:
+                  externalUserId: "customer_1001"
+                  category: "order_updates"
+                  email: 1
+                  sms: 0
+                  push: 1
+                  in_app: 0
+                  createdAt: "2026-11-07T03:00:00.000Z"
+                  updatedAt: "2026-11-07T03:00:00.000Z"
+        "400":
+          description: Invalid request body or path parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: "VALIDATION_ERROR"
+                  message: "Body must contain boolean values for all supported channels."
+        "401":
+          description: Missing or invalid API key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /v1/policy/check:
     post:
-      summary: Check if a notification is allowed by saved preferences
+      summary: Check notification policy
+      description: Evaluates whether a notification is permitted to be dispatched based on user preferences. Enforces default-deny if preferences are not configured.
+      tags:
+        - Policy
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [externalUserId, category, channel]
-              properties:
-                externalUserId: { type: string }
-                category: { type: string }
-                channel:
-                  type: string
-                  enum: [email, sms, push, in_app]
+              $ref: "#/components/schemas/PolicyCheckRequest"
+            example:
+              externalUserId: "customer_1001"
+              category: "order_updates"
+              channel: "email"
       responses:
-        "200": { description: Policy decision }
-        "400": { description: Invalid input }
-        "401": { description: Invalid or missing API key }
+        "200":
+          description: Policy evaluation decision returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyCheckResponse"
+              examples:
+                allowed:
+                  summary: Channel allowed by explicit preference
+                  value:
+                    data:
+                      externalUserId: "customer_1001"
+                      category: "order_updates"
+                      channel: "email"
+                      allowed: true
+                      reason: "preference_enabled"
+                denied_disabled:
+                  summary: Channel disabled by explicit preference
+                  value:
+                    data:
+                      externalUserId: "customer_1001"
+                      category: "order_updates"
+                      channel: "sms"
+                      allowed: false
+                      reason: "preference_disabled"
+                denied_default:
+                  summary: Denied by default because no preference was found
+                  value:
+                    data:
+                      externalUserId: "customer_1001"
+                      category: "promotional_offers"
+                      channel: "email"
+                      allowed: false
+                      reason: "preference_not_set"
+        "400":
+          description: Invalid request parameters or unsupported channel.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: "VALIDATION_ERROR"
+                  message: "Invalid policy check request."
+        "401":
+          description: Missing or invalid API key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: PingPolicy project API key
+      bearerFormat: "PingPolicy project API key (pp_live_...)"
+      description: "Bearer authentication using a project-scoped 64-character hex API key prefixed with pp_live_."
+
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - service
+      properties:
+        status:
+          type: string
+          example: "ok"
+        service:
+          type: string
+          example: "pingpolicy-api"
+
+    ChannelsConfig:
+      type: object
+      required:
+        - email
+        - sms
+        - push
+        - in_app
+      properties:
+        email:
+          type: boolean
+          description: Whether email notifications are enabled.
+        sms:
+          type: boolean
+          description: Whether SMS notifications are enabled.
+        push:
+          type: boolean
+          description: Whether mobile push notifications are enabled.
+        in_app:
+          type: boolean
+          description: Whether in-app notifications are enabled.
+
+    UpsertPreferenceRequest:
+      type: object
+      required:
+        - channels
+      properties:
+        channels:
+          $ref: "#/components/schemas/ChannelsConfig"
+
+    Preference:
+      type: object
+      properties:
+        externalUserId:
+          type: string
+          example: "customer_1001"
+        category:
+          type: string
+          example: "order_updates"
+        email:
+          type: integer
+          enum: [0, 1]
+          example: 1
+        sms:
+          type: integer
+          enum: [0, 1]
+          example: 0
+        push:
+          type: integer
+          enum: [0, 1]
+          example: 1
+        in_app:
+          type: integer
+          enum: [0, 1]
+          example: 0
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PolicyCheckRequest:
+      type: object
+      required:
+        - externalUserId
+        - category
+        - channel
+      properties:
+        externalUserId:
+          type: string
+          description: Opaque external user ID.
+          example: "customer_1001"
+        category:
+          type: string
+          description: Notification category identifier.
+          example: "order_updates"
+        channel:
+          type: string
+          enum: [email, sms, push, in_app]
+          description: Notification dispatch channel.
+          example: "email"
+
+    PolicyCheckResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - externalUserId
+            - category
+            - channel
+            - allowed
+            - reason
+          properties:
+            externalUserId:
+              type: string
+              example: "customer_1001"
+            category:
+              type: string
+              example: "order_updates"
+            channel:
+              type: string
+              enum: [email, sms, push, in_app]
+              example: "email"
+            allowed:
+              type: boolean
+              description: Whether notification dispatch is permitted.
+              example: true
+            reason:
+              type: string
+              enum: [preference_enabled, preference_disabled, preference_not_set, unsupported_channel]
+              description: Evaluation reason explaining the policy decision.
+              example: "preference_enabled"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code.
+              example: "VALIDATION_ERROR"
+            message:
+              type: string
+              description: Human-readable error explanation.
+              example: "Invalid policy check request."
+            details:
+              type: array
+              description: Optional array of validation issues or additional context.
+              items:
+                type: object
