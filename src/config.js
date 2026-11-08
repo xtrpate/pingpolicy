@@ -16,6 +16,7 @@ export const config = {
     user: required("DB_USER"),
     password: process.env.DB_PASSWORD ?? "",
     connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 10),
+    ...(process.env.DB_SSL === "true" ? { ssl: { rejectUnauthorized: true } } : {}),
   },
   corsOrigins: (process.env.CORS_ORIGINS || "")
     .split(",")
